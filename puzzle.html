@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пазл-15</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #34495e);
+            color: var(--tg-theme-text-color, #ecf0f1);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #f1c40f;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            background: var(--tg-theme-secondary-bg-color, #2c3e50);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+        
+        .puzzle-container {
+            margin: 20px auto;
+            position: relative;
+        }
+        
+        .puzzle-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            background: #f1c40f;
+            padding: 4px;
+            border-radius: 8px;
+            margin: 0 auto;
+            max-width: 320px;
+        }
+        
+        .tile {
+            aspect-ratio: 1;
+            background: #3498db;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .tile:active {
+            transform: scale(0.95);
+        }
+        
+        .tile.empty {
+            background: transparent;
+            cursor: default;
+        }
+        
+        .tile.movable:hover {
+            background: #2980b9;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: var(--tg-theme-button-color, #e74c3c);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn.start {
+            background: #2ecc71;
+        }
+        
+        .btn.shuffle {
+            background: #f39c12;
+        }
+        
+        .difficulty {
+            margin: 15px 0;
+        }
+        
+        .diff-btn {
+            background: var(--tg-theme-secondary-bg-color, #2c3e50);
+            color: var(--tg-theme-text-color, #ecf0f1);
+            border: 2px solid #f1c40f;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        
+        .diff-btn.active {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+        
+        .win-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .win-screen h2 {
+            color: #f1c40f;
+            margin-bottom: 15px;
+        }
+        
+        .moves-history {
+            margin: 15px 0;
+            padding: 10px;
+            background: var(--tg-theme-secondary-bg-color, #2c3e50);
+            border-radius: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧩 Пазл-15</h1>
+            <p>Расставьте числа по порядку!</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="moves">0</div>
+                <div>Ходы</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="time">0</div>
+                <div>Время</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="bestTime">--</div>
+                <div>Лучшее</div>
+            </div>
+        </div>
+        
+        <div class="difficulty">
+            <button class="diff-btn active" onclick="setDifficulty('easy')">3x3</button>
+            <button class="diff-btn" onclick="setDifficulty('medium')">4x4</button>
+            <button class="diff-btn" onclick="setDifficulty('hard')">5x5</button>
+        </div>
+        
+        <div class="puzzle-container">
+            <div class="puzzle-board" id="puzzleBoard">
+                <!-- Пазл генерируется JavaScript -->
+            </div>
+        </div>
+        
+        <div class="moves-history" id="movesHistory">
+            История ходов будет здесь...
+        </div>
+        
+        <div class="controls">
+            <button class="btn start" onclick="startGame()">🎮 Начать игру</button>
+            <button class="btn shuffle" onclick="shufflePuzzle()">🔀 Перемешать</button>
+            <button class="btn" onclick="resetGame()">🔄 Сброс</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="showHelp()">❓ Помощь</button>
+            <button class="btn" onclick="closeGame()">← Назад</button>
+        </div>
+        
+        <div class="win-screen" id="winScreen">
+            <h2>🎉 Пазл собран!</h2>
+            <p>Ходов: <span id="winMoves">0</span></p>
+            <p>Время: <span id="winTime">0</span> сек</p>
+            <button class="btn start" onclick="resetGame()">🎮 Собрать еще</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
+
+        const DIFFICULTY_SETTINGS = {
+            easy: { size: 3, tiles: 8 },
+            medium: { size: 4, tiles: 15 },
+            hard: { size: 5, tiles: 24 }
+        };
+
+        let puzzle = [];
+        let emptyPos = { row: 0, col: 0 };
+        let moves = 0;
+        let startTime = 0;
+        let timerInterval = null;
+        let gameStarted = false;
+        let currentDifficulty = 'easy';
+        let moveHistory = [];
+
+        // Загрузка рекордов
+        function loadBestTime() {
+            const saved = localStorage.getItem(`puzzle_best_${currentDifficulty}`);
+            if (saved) {
+                document.getElementById('bestTime').textContent = saved;
+            } else {
+                document.getElementById('bestTime').textContent = '--';
+            }
+        }
+
+        // Сохранение рекорда
+        function saveBestTime(time) {
+            const currentBest = localStorage.getItem(`puzzle_best_${currentDifficulty}`);
+            if (!currentBest || time < parseInt(currentBest)) {
+                localStorage.setItem(`puzzle_best_${currentDifficulty}`, time.toString());
+                document.getElementById('bestTime').textContent = time;
+            }
+        }
+
+        // Установка сложности
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadBestTime();
+            resetGame();
+        }
+
+        // Создание пазла
+        function createPuzzle() {
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const totalTiles = settings.size * settings.size;
+            
+            // Создаем решенный пазл
+            puzzle = [];
+            for (let i = 1; i < totalTiles; i++) {
+                puzzle.push(i);
+            }
+            puzzle.push(0); // Пустая клетка
+            
+            emptyPos = {
+                row: settings.size - 1,
+                col: settings.size - 1
+            };
+            
+            updatePuzzleDisplay();
+        }
+
+        // Обновление отображения пазла
+        function updatePuzzleDisplay() {
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const board = document.getElementById('puzzleBoard');
+            board.innerHTML = '';
+            
+            // Устанавливаем grid
+            board.style.gridTemplateColumns = `repeat(${settings.size}, 1fr)`;
+            
+            for (let i = 0; i < settings.size; i++) {
+                for (let j = 0; j < settings.size; j++) {
+                    const index = i * settings.size + j;
+                    const tileValue = puzzle[index];
+                    
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    
+                    if (tileValue === 0) {
+                        tile.classList.add('empty');
+                        tile.textContent = '';
+                    } else {
+                        tile.textContent = tileValue;
+                        
+                        // Проверяем, можно ли переместить эту плитку
+                        if (isMovable(i, j)) {
+                            tile.classList.add('movable');
+                            tile.onclick = () => moveTile(i, j);
+                        }
+                    }
+                    
+                    board.appendChild(tile);
+                }
+            }
+        }
+
+        // Проверка, можно ли переместить плитку
+        function isMovable(row, col) {
+            return (Math.abs(row - emptyPos.row) === 1 && col === emptyPos.col) ||
+                   (Math.abs(col - emptyPos.col) === 1 && row === emptyPos.row);
+        }
+
+        // Перемещение плитки
+        function moveTile(row, col) {
+            if (!gameStarted || !isMovable(row, col)) return;
+            
+            const fromIndex = row * DIFFICULTY_SETTINGS[currentDifficulty].size + col;
+            const toIndex = emptyPos.row * DIFFICULTY_SETTINGS[currentDifficulty].size + emptyPos.col;
+            
+            // Сохраняем ход в историю
+            moveHistory.push({
+                from: { row, col },
+                to: { ...emptyPos },
+                tile: puzzle[fromIndex]
+            });
+            
+            // Меняем плитки местами
+            [puzzle[fromIndex], puzzle[toIndex]] = [puzzle[toIndex], puzzle[fromIndex]];
+            
+            // Обновляем позицию пустой клетки
+            emptyPos = { row, col };
+            
+            moves++;
+            updateStats();
+            updatePuzzleDisplay();
+            updateMovesHistory();
+            
+            // Проверяем победу
+            if (checkWin()) {
+                gameWon();
+            }
+        }
+
+        // Проверка победы
+        function checkWin() {
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const totalTiles = settings.size * settings.size;
+            
+            for (let i = 0; i < totalTiles - 1; i++) {
+                if (puzzle[i] !== i + 1) {
+                    return false;
+                }
+            }
+            
+            return puzzle[totalTiles - 1] === 0;
+        }
+
+        // Перемешивание пазла
+        function shufflePuzzle() {
+            if (!gameStarted) return;
+            
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const shuffleMoves = settings.size * 50; // Количество перемешивающих ходов
+            
+            for (let i = 0; i < shuffleMoves; i++) {
+                const movableTiles = [];
+                
+                // Находим все перемещаемые плитки
+                for (let row = 0; row < settings.size; row++) {
+                    for (let col = 0; col < settings.size; col++) {
+                        if (isMovable(row, col)) {
+                            movableTiles.push({ row, col });
+                        }
+                    }
+                }
+                
+                // Случайно выбираем плитку для перемещения
+                const randomTile = movableTiles[Math.floor(Math.random() * movableTiles.length)];
+                moveTile(randomTile.row, randomTile.col);
+            }
+            
+            // Сбрасываем счетчики
+            moves = 0;
+            moveHistory = [];
+            updateStats();
+            updateMovesHistory();
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('moves').textContent = moves;
+            
+            if (gameStarted) {
+                const currentTime = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('time').textContent = currentTime;
+            }
+        }
+
+        // Обновление истории ходов
+        function updateMovesHistory() {
+            const historyElement = document.getElementById('movesHistory');
+            if (moveHistory.length === 0) {
+                historyElement.textContent = 'История ходов будет здесь...';
+                return;
+            }
+            
+            const lastMoves = moveHistory.slice(-5).reverse();
+            historyElement.innerHTML = '<strong>Последние ходы:</strong><br>' +
+                lastMoves.map(move => 
+                    `Плитка ${move.tile}: (${move.from.row+1},${move.from.col+1}) → (${move.to.row+1},${move.to.col+1})`
+                ).join('<br>');
+        }
+
+        // Таймер
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateStats, 1000);
+        }
+
+        // Начало игры
+        function startGame() {
+            if (gameStarted) return;
+            
+            gameStarted = true;
+            createPuzzle();
+            shufflePuzzle();
+            startTimer();
+            
+            document.querySelector('.btn.start').style.display = 'none';
+        }
+
+        // Победа
+        function gameWon() {
+            const currentTime = Math.floor((Date.now() - startTime) / 1000);
+            
+            document.getElementById('winMoves').textContent = moves;
+            document.getElementById('winTime').textContent = currentTime;
+            document.getElementById('winScreen').style.display = 'block';
+            
+            saveBestTime(currentTime);
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        }
+
+        // Сброс игры
+        function resetGame() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            moves = 0;
+            moveHistory = [];
+            gameStarted = false;
+            
+            updateStats();
+            updateMovesHistory();
+            createPuzzle();
+            
+            document.querySelector('.btn.start').style.display = 'inline-block';
+            document.getElementById('winScreen').style.display = 'none';
+        }
+
+        // Показать помощь
+        function showHelp() {
+            alert(`🧩 **Как играть в Пазл-15:**
+
+🎯 **Цель:** Расставить числа по порядку от 1 до N
+
+📝 **Правила:**
+1. Нажмите "Начать игру"
+2. Перемещайте плитки кликом
+3. Используйте пустую клетку для перемещений
+4. Соберите числа по порядку слева направо, сверху вниз
+
+🎮 **Уровни сложности:**
+• 3x3 - 8 плиток (легкий)
+• 4x4 - 15 плиток (средний)  
+• 5x5 - 24 плитки (сложный)
+
+💡 **Стратегии:**
+• Сначала соберите первый ряд
+• Затем первый столбец
+• Двигайтесь по спирали
+• Запоминайте позиции чисел
+
+🏆 **Старайтесь побить свой рекорд по времени!**`);
+        }
+
+        // Закрыть игру
+        function closeGame() {
+            tg.close();
+        }
+
+        // Инициализация
+        loadBestTime();
+        createPuzzle();
+    </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра памяти</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #2c3e50);
+            color: var(--tg-theme-text-color, #ecf0f1);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #f1c40f;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            background: var(--tg-theme-secondary-bg-color, #34495e);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+        
+        .game-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: var(--tg-theme-secondary-bg-color, #34495e);
+            border-radius: 10px;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        
+        .card.flipped {
+            background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+            transform: rotateY(180deg);
+        }
+        
+        .card.matched {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            cursor: default;
+            transform: rotateY(180deg) scale(0.95);
+        }
+        
+        .card .front {
+            display: none;
+        }
+        
+        .card.flipped .front,
+        .card.matched .front {
+            display: block;
+            transform: rotateY(180deg);
+        }
+        
+        .card .back {
+            color: rgba(255,255,255,0.8);
+            font-size: 18px;
+        }
+        
+        .card.flipped .back,
+        .card.matched .back {
+            display: none;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: var(--tg-theme-button-color, #e74c3c);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn.start {
+            background: #2ecc71;
+        }
+        
+        .difficulty {
+            margin: 15px 0;
+        }
+        
+        .diff-btn {
+            background: var(--tg-theme-secondary-bg-color, #34495e);
+            color: var(--tg-theme-text-color, #ecf0f1);
+            border: 2px solid #f1c40f;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        
+        .diff-btn.active {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+        
+        .win-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .win-screen h2 {
+            color: #f1c40f;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎴 Игра памяти</h1>
+            <p>Найдите все парные карточки!</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="moves">0</div>
+                <div>Ходы</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="matches">0</div>
+                <div>Пары</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="time">0</div>
+                <div>Время</div>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <p>Уровень сложности: <span id="currentDifficulty">Легкий</span></p>
+        </div>
+        
+        <div class="difficulty">
+            <button class="diff-btn active" onclick="setDifficulty('easy')">Легкий (4x4)</button>
+            <button class="diff-btn" onclick="setDifficulty('medium')">Средний (4x5)</button>
+            <button class="diff-btn" onclick="setDifficulty('hard')">Сложный (5x6)</button>
+        </div>
+        
+        <div class="game-board" id="gameBoard">
+            <!-- Карточки генерируются JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <button class="btn start" onclick="startGame()">🎮 Начать игру</button>
+            <button class="btn" onclick="resetGame()">🔄 Перезапуск</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="showHelp()">❓ Помощь</button>
+            <button class="btn" onclick="closeGame()">← Назад</button>
+        </div>
+        
+        <div class="win-screen" id="winScreen">
+            <h2>🎉 Поздравляем!</h2>
+            <p>Вы нашли все пары!</p>
+            <p>Ходов: <span id="winMoves">0</span></p>
+            <p>Время: <span id="winTime">0</span> сек</p>
+            <button class="btn start" onclick="resetGame()">🎮 Играть снова</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
+
+        // Emoji для карточек
+        const EMOJI_SETS = {
+            easy: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'],
+            medium: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯'],
+            hard: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵']
+        };
+
+        const DIFFICULTY_SETTINGS = {
+            easy: { rows: 4, cols: 4, emojiSet: 'easy' },
+            medium: { rows: 4, cols: 5, emojiSet: 'medium' },
+            hard: { rows: 5, cols: 6, emojiSet: 'hard' }
+        };
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairs = 0;
+        let moves = 0;
+        let gameStarted = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let currentDifficulty = 'easy';
+        let canFlip = true;
+
+        // Загрузка статистики
+        function loadStats() {
+            // Можно добавить сохранение рекордов
+        }
+
+        // Установка сложности
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.getElementById('currentDifficulty').textContent = 
+                difficulty === 'easy' ? 'Легкий' : 
+                difficulty === 'medium' ? 'Средний' : 'Сложный';
+            
+            resetGame();
+        }
+
+        // Создание карточек
+        function createCards() {
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const emojis = EMOJI_SETS[settings.emojiSet];
+            totalPairs = (settings.rows * settings.cols) / 2;
+            
+            // Создаем пары карточек
+            let cardValues = [];
+            for (let i = 0; i < totalPairs; i++) {
+                cardValues.push(emojis[i % emojis.length]);
+                cardValues.push(emojis[i % emojis.length]);
+            }
+            
+            // Перемешиваем карточки
+            cardValues = cardValues.sort(() => Math.random() - 0.5);
+            
+            return cardValues;
+        }
+
+        // Создание игрового поля
+        function createBoard() {
+            const settings = DIFFICULTY_SETTINGS[currentDifficulty];
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            // Устанавливаем grid в зависимости от сложности
+            gameBoard.style.gridTemplateColumns = `repeat(${settings.cols}, 1fr)`;
+            
+            cards = createCards();
+            
+            cards.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="front">${emoji}</div>
+                    <div class="back">?</div>
+                `;
+                card.addEventListener('click', () => flipCard(index));
+                gameBoard.appendChild(card);
+            });
+        }
+
+        // Переворот карточки
+        function flipCard(index) {
+            if (!gameStarted || !canFlip) return;
+            
+            const card = document.getElementsByClassName('card')[index];
+            
+            // Нельзя переворачивать уже совпавшие или перевернутые карточки
+            if (card.classList.contains('flipped') || card.classList.contains('matched')) {
+                return;
+            }
+            
+            // Переворачиваем карточку
+            card.classList.add('flipped');
+            flippedCards.push(index);
+            
+            // Если перевернуты две карточки, проверяем совпадение
+            if (flippedCards.length === 2) {
+                canFlip = false;
+                moves++;
+                updateStats();
+                
+                setTimeout(checkMatch, 1000);
+            }
+        }
+
+        // Проверка совпадения
+        function checkMatch() {
+            const [firstIndex, secondIndex] = flippedCards;
+            const firstCard = document.getElementsByClassName('card')[firstIndex];
+            const secondCard = document.getElementsByClassName('card')[secondIndex];
+            
+            if (cards[firstIndex] === cards[secondIndex]) {
+                // Совпадение!
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                matchedPairs++;
+                
+                if (matchedPairs === totalPairs) {
+                    gameWon();
+                }
+            } else {
+                // Не совпали, переворачиваем обратно
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+            }
+            
+            flippedCards = [];
+            canFlip = true;
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('matches').textContent = matchedPairs;
+            
+            if (gameStarted) {
+                const currentTime = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('time').textContent = currentTime;
+            }
+        }
+
+        // Таймер
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateStats, 1000);
+        }
+
+        // Начало игры
+        function startGame() {
+            if (gameStarted) return;
+            
+            gameStarted = true;
+            startTimer();
+            document.querySelector('.btn.start').style.display = 'none';
+        }
+
+        // Сброс игры
+        function resetGame() {
+            // Останавливаем таймер
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Сбрасываем переменные
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            gameStarted = false;
+            
+            // Обновляем статистику
+            updateStats();
+            
+            // Создаем новое поле
+            createBoard();
+            
+            // Показываем кнопку старта
+            document.querySelector('.btn.start').style.display = 'inline-block';
+            document.getElementById('winScreen').style.display = 'none';
+        }
+
+        // Победа
+        function gameWon() {
+            const currentTime = Math.floor((Date.now() - startTime) / 1000);
+            
+            document.getElementById('winMoves').textContent = moves;
+            document.getElementById('winTime').textContent = currentTime;
+            document.getElementById('winScreen').style.display = 'block';
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        }
+
+        // Показать помощь
+        function showHelp() {
+            alert(`🎴 **Как играть в Память:**
+
+🎯 **Цель:** Найти все парные карточки
+
+📝 **Правила:**
+1. Нажмите "Начать игру"
+2. Открывайте по 2 карточки за ход
+3. Если эмодзи совпали - карточки остаются открытыми
+4. Если нет - они переворачиваются обратно
+5. Запоминайте расположение карточек
+
+🎮 **Уровни сложности:**
+• Легкий: 8 пар (4x4)
+• Средний: 10 пар (4x5)  
+• Сложный: 15 пар (5x6)
+
+🧠 **Тренируйте память и внимание!**`);
+        }
+
+        // Закрыть игру
+        function closeGame() {
+            tg.close();
+        }
+
+        // Инициализация игры
+        loadStats();
+        createBoard();
+    </script>
+</body>
+</html>

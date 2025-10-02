@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Викторина</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #8e44ad);
+            color: var(--tg-theme-text-color, #ffffff);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #f1c40f;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+        
+        .progress {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #f1c40f;
+            transition: width 0.3s ease;
+        }
+        
+        .question-container {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .question {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        
+        .options {
+            display: grid;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .option {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            padding: 15px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            font-size: 16px;
+        }
+        
+        .option:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .option:active {
+            transform: scale(0.98);
+        }
+        
+        .option.correct {
+            background: #27ae60;
+            border-color: #2ecc71;
+        }
+        
+        .option.incorrect {
+            background: #e74c3c;
+            border-color: #c0392b;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: var(--tg-theme-button-color, #f1c40f);
+            color: var(--tg-theme-button-text-color, #2c3e50);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn.next {
+            background: #3498db;
+            color: white;
+        }
+        
+        .category-selector {
+            margin: 20px 0;
+        }
+        
+        .category-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 2px solid #f1c40f;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .category-btn.active {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+        
+        .result-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .result-screen h2 {
+            color: #f1c40f;
+            margin-bottom: 15px;
+        }
+        
+        .feedback {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .feedback.correct {
+            background: rgba(39, 174, 96, 0.2);
+            color: #2ecc71;
+            display: block;
+        }
+        
+        .feedback.incorrect {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Викторина</h1>
+            <p>Проверьте свои знания!</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="score">0</div>
+                <div>Очки</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="questionNumber">1/10</div>
+                <div>Вопрос</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="correctAnswers">0</div>
+                <div>Правильно</div>
+            </div>
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 10%"></div>
+            </div>
+        </div>
+        
+        <div class="category-selector" id="categorySelector">
+            <h3>Выберите категорию:</h3>
+            <button class="category-btn active" onclick="setCategory('general')">🌍 Общие знания</button>
+            <button class="category-btn" onclick="setCategory('science')">🔬 Наука</button>
+            <button class="category-btn" onclick="setCategory('history')">📜 История</button>
+            <button class="category-btn" onclick="setCategory('movies')">🎬 Кино</button>
+        </div>
+        
+        <div class="question-container" id="questionContainer">
+            <div class="question" id="question">
+                Выберите категорию и нажмите "Начать викторину"
+            </div>
+        </div>
+        
+        <div class="feedback" id="feedback"></div>
+        
+        <div class="options" id="optionsContainer">
+            <!-- Варианты ответов генерируются JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="startBtn" onclick="startQuiz()">🎮 Начать викторину</button>
+            <button class="btn next" id="nextBtn" onclick="nextQuestion()" style="display: none;">➡️ Следующий вопрос</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="showHelp()">❓ Помощь</button>
+            <button class="btn" onclick="closeGame()">← Назад</button>
+        </div>
+        
+        <div class="result-screen" id="resultScreen">
+            <h2>🎉 Викторина завершена!</h2>
+            <p>Ваш результат: <span id="finalScore">0</span>/10</p>
+            <p>Правильных ответов: <span id="finalCorrect">0</span></p>
+            <p id="resultMessage"></p>
+            <button class="btn" onclick="restartQuiz()">🔄 Начать заново</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
+
+        // База вопросов по категориям
+        const QUIZ_DATA = {
+            general: [
+                {
+                    question: "Какая планета известна как 'Красная планета'?",
+                    options: ["Венера", "Марс", "Юпитер", "Сатурн"],
+                    correct: 1
+                },
+                {
+                    question: "Сколько континентов на Земле?",
+                    options: ["5", "6", "7", "8"],
+                    correct: 2
+                },
+                {
+                    question: "Какое животное является символом России?",
+                    options: ["Медведь", "Орел", "Волк", "Тигр"],
+                    correct: 0
+                },
+                {
+                    question: "Какой газ преобладает в атмосфере Земли?",
+                    options: ["Кислород", "Углекислый газ", "Азот", "Водород"],
+                    correct: 2
+                },
+                {
+                    question: "Столица Австралии?",
+                    options: ["Сидней", "Мельбурн", "Канберра", "Перт"],
+                    correct: 2
+                },
+                {
+                    question: "Самая длинная река в мире?",
+                    options: ["Амазонка", "Нил", "Янцзы", "Миссисипи"],
+                    correct: 0
+                },
+                {
+                    question: "Кто написал 'Войну и мир'?",
+                    options: ["Достоевский", "Толстой", "Чехов", "Пушкин"],
+                    correct: 1
+                },
+                {
+                    question: "Сколько цветов у радуги?",
+                    options: ["5", "6", "7", "8"],
+                    correct: 2
+                },
+                {
+                    question: "Самое большое млекопитающее в мире?",
+                    options: ["Слон", "Синий кит", "Жираф", "Бегемот"],
+                    correct: 1
+                },
+                {
+                    question: "Год основания Москвы?",
+                    options: ["1147", "1247", "1347", "1447"],
+                    correct: 0
+                }
+            ],
+            science: [
+                {
+                    question: "Какой элемент обозначается символом 'O'?",
+                    options: ["Золото", "Кислород", "Олово", "Осмий"],
+                    correct: 1
+                },
+                {
+                    question: "Сколько хромосом у человека?",
+                    options: ["23", "46", "64", "32"],
+                    correct: 1
+                },
+                {
+                    question: "Кто открыл penicillin?",
+                    options: ["Пастер", "Флеминг", "Кюри", "Эйнштейн"],
+                    correct: 1
+                },
+                {
+                    question: "Самая близкая звезда к Земле?",
+                    options: ["Проксима Центавра", "Сириус", "Солнце", "Альфа Центавра"],
+                    correct: 2
+                },
+                {
+                    question: "Единица измерения силы тока?",
+                    options: ["Вольт", "Ампер", "Ом", "Ватт"],
+                    correct: 1
+                }
+            ],
+            history: [
+                {
+                    question: "В каком году началась Вторая мировая война?",
+                    options: ["1939", "1941", "1945", "1935"],
+                    correct: 0
+                },
+                {
+                    question: "Первый president США?",
+                    options: ["Джон Адамс", "Джордж Вашингтон", "Томас Джефферсон", "Авраам Линкольн"],
+                    correct: 1
+                },
+                {
+                    question: "Кто построил первый печатный станок?",
+                    options: ["Галилей", "Гутенберг", "Да Винчи", "Коперник"],
+                    correct: 1
+                }
+            ],
+            movies: [
+                {
+                    question: "Кто режиссер фильма 'Титаник'?",
+                    options: ["Стивен Спилберг", "Джеймс Кэмерон", "Кристофер Нолан", "Квентин Тарантино"],
+                    correct: 1
+                },
+                {
+                    question: "Сколько фильмов в оригинальной трилогии 'Звездных войн'?",
+                    options: ["3", "4", "5", "6"],
+                    correct: 0
+                },
+                {
+                    question: "Кто играл главную роль в 'Форресте Гампе'?",
+                    options: ["Том Круз", "Том Хэнкс", "Брэд Питт", "Леонардо ДиКаприо"],
+                    correct: 1
+                }
+            ]
+        };
+
+        let currentCategory = 'general';
+        let currentQuestion = 0;
+        let score = 0;
+        let correctAnswers = 0;
+        let questions = [];
+        let canAnswer = true;
+
+        // Установка категории
+        function setCategory(category) {
+            currentCategory = category;
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            resetQuiz();
+        }
+
+        // Загрузка вопросов
+        function loadQuestions() {
+            questions = [...QUIZ_DATA[currentCategory]];
+            // Перемешиваем вопросы
+            questions = questions.sort(() => Math.random() - 0.5).slice(0, 10);
+        }
+
+        // Начало викторины
+        function startQuiz() {
+            loadQuestions();
+            currentQuestion = 0;
+            score = 0;
+            correctAnswers = 0;
+            canAnswer = true;
+            
+            document.getElementById('categorySelector').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            
+            showQuestion();
+        }
+
+        // Показать вопрос
+        function showQuestion() {
+            if (currentQuestion >= questions.length) {
+                endQuiz();
+                return;
+            }
+            
+            const question = questions[currentQuestion];
+            document.getElementById('question').textContent = question.question;
+            document.getElementById('questionNumber').textContent = `${currentQuestion + 1}/${questions.length}`;
+            document.getElementById('progressFill').style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
+            
+            // Очищаем варианты ответов
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            // Создаем варианты ответов
+            question.options.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.textContent = `${String.fromCharCode(65 + index)}) ${option}`;
+                optionElement.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // Сбрасываем состояние
+            document.getElementById('feedback').className = 'feedback';
+            document.getElementById('feedback').textContent = '';
+            canAnswer = true;
+        }
+
+        // Выбор ответа
+        function selectAnswer(selectedIndex) {
+            if (!canAnswer) return;
+            
+            canAnswer = false;
+            const question = questions[currentQuestion];
+            const options = document.getElementsByClassName('option');
+            const feedback = document.getElementById('feedback');
+            
+            // Подсвечиваем ответы
+            for (let i = 0; i < options.length; i++) {
+                if (i === question.correct) {
+                    options[i].classList.add('correct');
+                } else if (i === selectedIndex) {
+                    options[i].classList.add('incorrect');
+                }
+            }
+            
+            // Проверяем ответ
+            if (selectedIndex === question.correct) {
+                score += 10;
+                correctAnswers++;
+                feedback.textContent = '✅ Правильно! +10 очков';
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = `❌ Неправильно! Правильный ответ: ${String.fromCharCode(65 + question.correct)}) ${question.options[question.correct]}`;
+                feedback.className = 'feedback incorrect';
+            }
+            
+            updateStats();
+        }
+
+        // Следующий вопрос
+        function nextQuestion() {
+            currentQuestion++;
+            showQuestion();
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('correctAnswers').textContent = correctAnswers;
+        }
+
+        // Завершение викторины
+        function endQuiz() {
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalCorrect').textContent = `${correctAnswers}/${questions.length}`;
+            
+            let message = '';
+            if (correctAnswers === questions.length) {
+                message = '🎉 Идеальный результат! Вы гений!';
+            } else if (correctAnswers >= questions.length * 0.7) {
+                message = '👍 Отличный результат!';
+            } else if (correctAnswers >= questions.length * 0.5) {
+                message = '😊 Хороший результат!';
+            } else {
+                message = '💪 Продолжайте тренироваться!';
+            }
+            
+            document.getElementById('resultMessage').textContent = message;
+            document.getElementById('resultScreen').style.display = 'block';
+        }
+
+        // Перезапуск викторины
+        function restartQuiz() {
+            document.getElementById('resultScreen').style.display = 'none';
+            document.getElementById('categorySelector').style.display = 'block';
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('nextBtn').style.display = 'none';
+            
+            document.getElementById('question').textContent = 'Выберите категорию и нажмите "Начать викторину"';
+            document.getElementById('optionsContainer').innerHTML = '';
+            document.getElementById('progressFill').style.width = '10%';
+        }
+
+        // Сброс викторины
+        function resetQuiz() {
+            document.getElementById('question').textContent = 'Выберите категорию и нажмите "Начать викторину"';
+            document.getElementById('optionsContainer').innerHTML = '';
+            document.getElementById('progressFill').style.width = '10%';
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('categorySelector').style.display = 'block';
+            document.getElementById('resultScreen').style.display = 'none';
+            
+            updateStats();
+        }
+
+        // Показать помощь
+        function showHelp() {
+            alert(`🧠 **Как играть в Викторину:**
+
+🎯 **Цель:** Ответить на максимальное число вопросов
+
+📝 **Правила:**
+1. Выберите категорию знаний
+2. Нажмите "Начать викторину"
+3. Выбирайте из 4 вариантов ответа
+4. За правильный ответ - +10 очков
+5. Всего 10 вопросов в каждой викторине
+
+🏆 **Категории:**
+• 🌍 Общие знания - разнообразные вопросы
+• 🔬 Наука - физика, химия, биология
+• 📜 История - исторические события
+• 🎬 Кино - фильмы и актеры
+
+💡 **Советы:**
+• Внимательно читайте вопросы
+• Исключайте заведомо неправильные ответы
+• Не торопитесь с выбором`);
+        }
+
+        // Закрыть игру
+        function closeGame() {
+            tg.close();
+        }
+
+        // Инициализация
+        updateStats();
+    </script>
+</body>
+</html>
