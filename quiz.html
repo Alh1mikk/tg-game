@@ -242,10 +242,10 @@
         
         <div class="category-selector" id="categorySelector">
             <h3>Выберите категорию:</h3>
-            <button class="category-btn active" onclick="setCategory('general')">🌍 Общие знания</button>
-            <button class="category-btn" onclick="setCategory('science')">🔬 Наука</button>
-            <button class="category-btn" onclick="setCategory('history')">📜 История</button>
-            <button class="category-btn" onclick="setCategory('movies')">🎬 Кино</button>
+            <button class="category-btn active" onclick="setCategory('general', this)">🌍 Общие знания</button>
+            <button class="category-btn" onclick="setCategory('science', this)">🔬 Наука</button>
+            <button class="category-btn" onclick="setCategory('history', this)">📜 История</button>
+            <button class="category-btn" onclick="setCategory('movies', this)">🎬 Кино</button>
         </div>
         
         <div class="question-container" id="questionContainer">
@@ -413,14 +413,14 @@
         let canAnswer = true;
 
         // Установка категории
-        function setCategory(category) {
+        function setCategory(category, element) {
             currentCategory = category;
             
             // Обновляем активную кнопку
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            element.classList.add('active');
             
             resetQuiz();
         }

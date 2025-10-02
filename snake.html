@@ -304,7 +304,7 @@
                 // Увеличиваем скорость каждые 50 очков
                 if (score % 50 === 0 && gameLoop) {
                     clearInterval(gameLoop);
-                    gameLoop = setInterval(gameUpdate, 0 - Math.min(score / 50 * 5, 60));
+                    gameLoop = setInterval(gameUpdate, 100 - Math.min(score / 50 * 5, 60));
                 }
             } else {
                 // Удаляем хвост, если не съели еду

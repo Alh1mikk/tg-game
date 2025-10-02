@@ -199,6 +199,7 @@
         <div class="controls">
             <button class="btn" onclick="newGame()">🔄 Новая игра</button>
             <button class="btn" onclick="showHelp()">❓ Помощь</button>
+            <button class="btn" onclick="closeGame()">← Назад</button>
         </div>
     </div>
 
@@ -478,6 +479,11 @@
 ⬜ СЕРАЯ - буквы нет в слове
 
 Удачи!`);
+        }
+
+        // Закрыть игру
+        function closeGame() {
+            tg.close();
         }
 
         // Запуск игры
