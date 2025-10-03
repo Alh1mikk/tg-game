@@ -243,11 +243,11 @@
         
         // Инициализация игры
         function initGame() {
-            snake = [{x: 10, y: 10}];
+            snake = [{x: 7, y: 8}];
             generateFood();
             // Начинаем движение вправо, чтобы избежать мгновенного проигрыша
-            dx = 1;
-            dy = 0;
+            dx = 0;
+            dy = -1;
             score = 0;
             gameRunning = true;
             gamePaused = false;
@@ -306,7 +306,7 @@
                 if (score % 50 === 0 && gameLoop) {
                     clearInterval(gameLoop);
                     // Уменьшаем начальную скорость и её увеличение
-                    gameLoop = setInterval(gameUpdate, 200 - Math.min(score / 50 * 10, 120));
+                    gameLoop = setInterval(gameUpdate, 400 - Math.min(score / 50 * 10, 120));
                 }
             } else {
                 // Удаляем хвост, если не съели еду
@@ -463,7 +463,7 @@
                 clearInterval(gameLoop);
             }
             // Уменьшаем скорость игры в 2 раза (было 100, стало 200)
-            gameLoop = setInterval(gameUpdate, 200);
+            gameLoop = setInterval(gameUpdate, 400);
         }
         
         // Пауза
