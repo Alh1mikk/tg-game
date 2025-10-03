@@ -6,6 +6,7 @@
     <title>Wordle RU</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -118,10 +119,12 @@
             cursor: pointer;
             min-width: 30px;
             text-transform: uppercase;
+            color: var(--tg-theme-text-color, #000000);
         }
         
         .key:active {
             background: var(--tg-theme-hint-color, #bbb);
+            color: var(--tg-theme-text-color, #000000);
         }
         
         .key.wide {
@@ -257,6 +260,7 @@
         // Инициализация игры
         function initGame() {
             currentWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+            console.log('Загаданное слово:', currentWord); // Для отладки
             currentRow = 0;
             currentCol = 0;
             gameOver = false;
@@ -365,7 +369,7 @@
             
             guess = guess.toUpperCase();
             
-            // Проверяем существование слова (упрощенная проверка)
+            // Проверяем существование слова
             if (!WORDS.includes(guess)) {
                 showMessage('Слово не найдено в словаре!', 'error');
                 return;
@@ -387,17 +391,15 @@
 
         // Проверка букв
         function checkLetters(guess) {
-            const result = [];
+            const result = new Array(5).fill('absent');
             const wordLetters = currentWord.split('');
             const guessLetters = guess.split('');
             
             // Сначала отмечаем правильные позиции
             for (let i = 0; i < 5; i++) {
                 if (guessLetters[i] === wordLetters[i]) {
-                    result.push('correct');
+                    result[i] = 'correct';
                     wordLetters[i] = null;
-                } else {
-                    result.push(null);
                 }
             }
             
@@ -409,8 +411,6 @@
                 if (index !== -1) {
                     result[i] = 'present';
                     wordLetters[index] = null;
-                } else {
-                    result[i] = 'absent';
                 }
             }
             
@@ -426,8 +426,12 @@
                 // Обновляем клавиатуру
                 const key = Array.from(document.querySelectorAll('.key'))
                     .find(k => k.textContent === cell.textContent);
-                if (key && !key.classList.contains('correct')) {
-                    key.classList.add(result[col]);
+                if (key) {
+                    // Не перезаписываем правильный статус
+                    if (!key.classList.contains('correct')) {
+                        key.classList.remove('present', 'absent');
+                        key.classList.add(result[col]);
+                    }
                 }
             }
         }
@@ -442,10 +446,10 @@
             
             saveStats();
             updateStatsDisplay();
-            showMessage(`Поздравляем! Вы угадали слово за ${currentRow + 1} попыток! 🎉`, 'success');
+            showMessage(`🎉 Поздравляем! Вы угадали слово "${currentWord}"!`, 'success');
         }
 
-        // Проигрыш
+        // Поражение
         function gameLost() {
             gameOver = true;
             stats.gamesPlayed++;
@@ -453,14 +457,17 @@
             
             saveStats();
             updateStatsDisplay();
-            showMessage(`Игра окончена! Загаданное слово: ${currentWord}`, 'error');
+            showMessage(`😔 Слово было: ${currentWord}`, 'error');
         }
 
         // Показать сообщение
         function showMessage(text, type = '') {
             const message = document.getElementById('message');
             message.textContent = text;
-            message.className = `message ${type}`;
+            message.className = 'message';
+            if (type) {
+                message.classList.add(type);
+            }
         }
 
         // Новая игра
@@ -470,15 +477,25 @@
 
         // Показать помощь
         function showHelp() {
-            alert(`🔠 Как играть в Вордли:
+            alert(`🎯 **Как играть в Вордли:**
 
-🎯 Угадайте слово из 5 букв за 6 попыток
+🎯 **Цель:** Угадать слово из 5 букв за 6 попыток
 
-🟩 ЗЕЛЕНАЯ - буква на правильном месте
-🟨 ЖЕЛТАЯ - буква есть в слове, но в другом месте
-⬜ СЕРАЯ - буквы нет в слове
+📝 **Правила:**
+• Вводите слово из 5 букв и нажимайте "Ввод"
+• После каждой попытки цвет букв покажет:
+  🟩 Зеленый - буква на правильном месте
+  🟨 Желтый - буква есть в слове, но в другом месте
+  ⬜ Серый - буквы нет в слове
 
-Удачи!`);
+💡 **Советы:**
+• Начинайте со слов, содержащих много гласных
+• Используйте результаты предыдущих попыток
+• Помните о русской раскладке клавиатуры
+
+📚 **Словарь:** Используются только существующие русские слова из 5 букв
+
+Удачи! 🍀`);
         }
 
         // Закрыть игру
@@ -486,7 +503,7 @@
             tg.close();
         }
 
-        // Запуск игры
+        // Инициализация при загрузке
         loadStats();
         initGame();
     </script>

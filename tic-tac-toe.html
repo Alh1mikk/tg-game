@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Крестики-нолики</title>
     <style>
+        /* Стили остаются без изменений */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -121,12 +122,14 @@
             cell.textContent = currentPlayer;
             cell.classList.add(currentPlayer.toLowerCase());
 
+            // Сначала проверяем победителя
             if (checkWinner()) {
                 document.getElementById('status').textContent = `Победил: ${currentPlayer}!`;
                 gameActive = false;
                 return;
             }
 
+            // Затем проверяем ничью
             if (gameBoard.every(cell => cell !== '')) {
                 document.getElementById('status').textContent = 'Ничья!';
                 gameActive = false;

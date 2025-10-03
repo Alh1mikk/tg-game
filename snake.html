@@ -245,7 +245,8 @@
         function initGame() {
             snake = [{x: 10, y: 10}];
             generateFood();
-            dx = 0;
+            // Начинаем движение вправо, чтобы избежать мгновенного проигрыша
+            dx = 1;
             dy = 0;
             score = 0;
             gameRunning = true;
@@ -304,7 +305,8 @@
                 // Увеличиваем скорость каждые 50 очков
                 if (score % 50 === 0 && gameLoop) {
                     clearInterval(gameLoop);
-                    gameLoop = setInterval(gameUpdate, 100 - Math.min(score / 50 * 5, 60));
+                    // Уменьшаем начальную скорость и её увеличение
+                    gameLoop = setInterval(gameUpdate, 200 - Math.min(score / 50 * 10, 120));
                 }
             } else {
                 // Удаляем хвост, если не съели еду
@@ -460,7 +462,8 @@
             if (gameLoop) {
                 clearInterval(gameLoop);
             }
-            gameLoop = setInterval(gameUpdate, 100);
+            // Уменьшаем скорость игры в 2 раза (было 100, стало 200)
+            gameLoop = setInterval(gameUpdate, 200);
         }
         
         // Пауза

@@ -6,6 +6,7 @@
     <title>Игра памяти</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -203,9 +204,9 @@
         </div>
         
         <div class="difficulty">
-            <button class="diff-btn active" onclick="setDifficulty('easy', this)">Легкий (4x4)</button>
-            <button class="diff-btn" onclick="setDifficulty('medium', this)">Средний (4x5)</button>
-            <button class="diff-btn" onclick="setDifficulty('hard', this)">Сложный (5x6)</button>
+            <button class="diff-btn active" onclick="setDifficulty('easy')">Легкий (4x4)</button>
+            <button class="diff-btn" onclick="setDifficulty('medium')">Средний (4x5)</button>
+            <button class="diff-btn" onclick="setDifficulty('hard')">Сложный (5x6)</button>
         </div>
         
         <div class="game-board" id="gameBoard">
@@ -300,7 +301,10 @@
             }
             
             // Перемешиваем карточки
-            cardValues = cardValues.sort(() => Math.random() - 0.5);
+            for (let i = cardValues.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cardValues[i], cardValues[j]] = [cardValues[j], cardValues[i]];
+            }
             
             return cardValues;
         }
@@ -335,7 +339,7 @@
             const card = document.getElementsByClassName('card')[index];
             
             // Нельзя переворачивать уже совпавшие или перевернутые карточки
-            if (card.classList.contains('flipped') || card.classList.contains('matched')) {
+            if (card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.includes(index)) {
                 return;
             }
             
@@ -356,13 +360,11 @@
         // Проверка совпадения
         function checkMatch() {
             const [firstIndex, secondIndex] = flippedCards;
-            const firstCard = document.getElementsByClassName('card')[firstIndex];
-            const secondCard = document.getElementsByClassName('card')[secondIndex];
             
             if (cards[firstIndex] === cards[secondIndex]) {
                 // Совпадение!
-                firstCard.classList.add('matched');
-                secondCard.classList.add('matched');
+                document.getElementsByClassName('card')[firstIndex].classList.add('matched');
+                document.getElementsByClassName('card')[secondIndex].classList.add('matched');
                 matchedPairs++;
                 
                 if (matchedPairs === totalPairs) {
@@ -370,8 +372,8 @@
                 }
             } else {
                 // Не совпали, переворачиваем обратно
-                firstCard.classList.remove('flipped');
-                secondCard.classList.remove('flipped');
+                document.getElementsByClassName('card')[firstIndex].classList.remove('flipped');
+                document.getElementsByClassName('card')[secondIndex].classList.remove('flipped');
             }
             
             flippedCards = [];
@@ -417,6 +419,7 @@
             matchedPairs = 0;
             moves = 0;
             gameStarted = false;
+            canFlip = true;
             
             // Обновляем статистику
             updateStats();
